@@ -126,4 +126,6 @@ Cài đặt trình biên dịch để sử dụng thư viện:
 
 ![](2.png)
 
+**Host sau khi ngưng tấn công**
+
 ![](3.png)
