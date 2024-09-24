@@ -120,8 +120,10 @@ Cài đặt trình biên dịch để sử dụng thư viện:
 
 **Host trước khi bị tấn công**
 
-![](img/1.png)
+![](1.png)
 
 **Host trong quá trình bị tấn công**
 
-![](img/2.png)
+![](2.png)
+
+![](3.png)
