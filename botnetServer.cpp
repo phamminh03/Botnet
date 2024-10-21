@@ -6,17 +6,44 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <cstdlib>        
+#include <sstream>
 
 using namespace std;
 
 static int PORT = 45444;
 int serverSocket;
-string currCommand = "";
+
+void handleClient(int clientSocket, const string& ipAddress) {
+    char buffer[4096];
+    memset(buffer, 0, 4096);
+
+    int bytesReceived = recv(clientSocket, buffer, 4096, 0);
+    if (bytesReceived > 0) 
+    {
+        string request(buffer, bytesReceived);
+        if (request == "terminal") 
+        {
+            // cout << "Running hping3 with IP: " << ipAddress << endl;
+            // string hpingCommand = "sudo hping3 " + ipAddress + " --flood > /dev/null 2>&1 &";
+            // system(hpingCommand.c_str());
+            // string response = "Request received. Running hping3 on " + ipAddress;
+            // send(clientSocket, response.c_str(), response.size(), 0);
+            cout << "Client requested to run hping3." << endl;
+            string response = "Please run hping3 on " + ipAddress;
+            send(clientSocket, response.c_str(), response.size(), 0);
+        }
+    }
+
+    close(clientSocket);
+}
 
 int main() {
+    system("clear");
+    cout << "Connecting to clients...\n" << endl;
 
-    cout << "Connecting to client...\n" << endl;
-    sleep(1);
+    string ipAddress;
+    cout << "Enter the target IP address for hping3: ";
+    cin >> ipAddress;
 
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket == -1) 
@@ -32,11 +59,19 @@ int main() {
 
     if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) 
     {
-        cerr << "Bind failed!" << endl;
+        cerr << "Bind failed! Error: " << strerror(errno) << endl;
+        close(serverSocket);  
         return -1;
     }
 
-    listen(serverSocket, 10);
+    if (listen(serverSocket, 10) < 0) 
+    {
+        cerr << "Listen failed! Error: " << strerror(errno) << endl;
+        close(serverSocket);
+        return -1;
+    }
+
+    cout << "Server listening on port: " << PORT << endl;
 
     while (true) 
     {
@@ -46,31 +81,19 @@ int main() {
 
         if (clientSocket < 0) 
         {
-            cerr << "Failed to accept connection!" << endl;
+            cerr << "Failed to accept connection! Error: " << strerror(errno) << endl;
             continue;
         }
 
-        char buffer[4096];
-        memset(buffer, 0, 4096);
+        char clientIP[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &clientAddr.sin_addr, clientIP, INET_ADDRSTRLEN);
+        cout << "Client connected from " << clientIP << ":" << ntohs(clientAddr.sin_port) << endl;
 
-        int bytesReceived = recv(clientSocket, buffer, 4096, 0);
-        if (bytesReceived > 0) 
-        {
-            string request(buffer, bytesReceived);
-            if (request == "terminal") 
-            {
-                cout << "Opening terminal..." << endl;
-                system("gnome-terminal");
-                system("sudo apt install hping3");
-                system("y");
-                system("sudo hping3 192.168.0.130 --flood");
-            } 
-        }
-
-        close(clientSocket);
-        sleep(1);
+        thread clientThread(handleClient, clientSocket, ipAddress);
+        clientThread.detach();
     }
 
     close(serverSocket);
     return 0;
 }
+
